@@ -2,9 +2,11 @@ package cs.bigdata.ex51;
 
 import java.io.IOException;
 import java.util.StringTokenizer;
+import java.util.Iterator;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
@@ -14,57 +16,85 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
 
 public class WordCount {
 	
-	public static class WCMapper extends Mapper<Text, Text, Text, IntWritable>
+	public static class WCMapper extends Mapper<LongWritable, Text, Text, IntWritable>
 	{
-		public void map(Text value, Context context) throws IOException, InterruptedException
+		// Attributs
+		private final static IntWritable one = new IntWritable(1);
+		
+		@Override
+		protected void map(LongWritable keyE, Text value, Context context) throws IOException, InterruptedException
 		{
 			StringTokenizer itr = new StringTokenizer(value.toString());
+			String token;
+			
+			// On recupere le nom du fichier
 	        String fileName = ((FileSplit) context.getInputSplit()).getPath().getName();
 	        
 	        while (itr.hasMoreTokens())
 	        {
-	            context.write(new Text(itr.nextToken() + "@" + fileName), new IntWritable(1));
+	        		// Mise en format de chaque mot
+	        		token = itr.nextToken();
+	        		token.toLowerCase();  // lettres en minuscule
+	        		token = token.replaceAll("[^\\w\\s]", "");  // Regex pour retirer les caracteres speciaux
+	            context.write(new Text(token + "@" + fileName), one);
 	        }
 	    }
+		
+		public void run(Context context) throws IOException, InterruptedException {
+		    setup(context);
+		    while (context.nextKeyValue()) {
+		        map(context.getCurrentKey(), context.getCurrentValue(), context);
+		    }
+		    cleanup(context);
+		}
 	}
 
 	public static class WCReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
-	    private IntWritable result = new IntWritable();
 
-	    public void reduce(Text key, Iterable<IntWritable> values, Context context
-	                       ) throws IOException, InterruptedException 
-	    {
-	      int sum = 0;
-	      for (IntWritable val : values)
-	      {
-	        sum += val.get();
-	      }
-	      result.set(sum);
-	      context.write(key, result);
+	    private IntWritable totalWordCount = new IntWritable();
+
+	    @Override
+	    public void reduce(final Text key, final Iterable<IntWritable> values,
+	            final Context context) throws IOException, InterruptedException {
+
+	        int sum = 0;
+	        Iterator<IntWritable> iterator = values.iterator();
+
+	        while (iterator.hasNext()) {
+	            sum += iterator.next().get();
+	        }
+
+	        totalWordCount.set(sum);
+	        context.write(key, totalWordCount);
 	    }
-	  }
-	  public static void main(String[] args) throws Exception {
+	}
+	
+	public static void main(Configuration conf) throws Exception {
 		  
-			// Configuration to read file from hdfs
-			Configuration conf = new Configuration();
-			conf.set("fs.defaultFS","hdfs://localhost:9000");
+		    Job job = Job.getInstance(conf, "word count");
+		    
 			Path path_input = new Path("/user/raphaelgavache/input");
 			Path path_output = new Path("/user/raphaelgavache/output1");
-			
-		    Job job = Job.getInstance(conf, "word count");
-		    job.setJarByClass(WordCount.class);
-		    job.setMapperClass(WCMapper.class);
-		    job.setCombinerClass(WCReducer.class);
-		    job.setReducerClass(WCReducer.class);
-		    job.setOutputKeyClass(Text.class);
-		    job.setOutputValueClass(IntWritable.class);
-		    job.setMapOutputKeyClass(Text.class);
-		    job.setMapOutputValueClass(IntWritable.class);
 		    FileInputFormat.addInputPath(job, path_input);
 		    FileOutputFormat.setOutputPath(job, path_output);
-		    System.exit(job.waitForCompletion(true) ? 0 : 1);
+			
+		    // Classes map, reduce, programe
+		    job.setJarByClass(WordCount.class);
+		    job.setMapperClass(WCMapper.class);
+		    job.setReducerClass(WCReducer.class);
+
+		    // Classes d'entree, sortie
+		    job.setMapOutputKeyClass(Text.class);
+		    job.setMapOutputValueClass(IntWritable.class);
+		    job.setOutputKeyClass(TextInputFormat.class);
+		    job.setOutputValueClass(TextOutputFormat.class);
+		    
+		    job.waitForCompletion(true);
 		  }
 }
