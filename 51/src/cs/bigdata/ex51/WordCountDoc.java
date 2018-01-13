@@ -24,18 +24,18 @@ public class WordCountDoc {
 		
 	    /**
 	     *     En entree : 
-	     *     worse@callwild.txt           -> 6
-	     *     worse@defoe-robinson-103.txt -> 22
+	     *     candle@callwild.txt           -> 2
+	     *     candle@defoe-robinson-103.txt -> 3
 	     *
 	     *     En sortie :
-	     *     callwild.txt -> worse=6
-	     *     defoe.txt    -> worse=22
+	     *     callwild.txt -> candle=2
+	     *     defoe.txt    -> candle=3
 	     */	
 	    @Override
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-	        String[] wordAndDocCounter = value.toString().split("\t");
-	        String[] wordAndDoc = wordAndDocCounter[0].split("@");
-	        context.write(new Text(wordAndDoc[1]), new Text(wordAndDoc[0] + "=" + wordAndDocCounter[1]));
+	        String[] motTexte_compteur = value.toString().split("\t");
+	        String[] motTexte = motTexte_compteur[0].split("@");
+	        context.write(new Text(motTexte[1]), new Text(motTexte[0] + "=" + motTexte_compteur[1]));
 	    }
 	}
 
@@ -43,10 +43,10 @@ public class WordCountDoc {
 		
 	    /**
 	     *     En entree : 
-	     *     callwild.txt           -> ["worse=6", "and=1464", ...]
+	     *     callwild.txt           -> ["candle=2", "and=1531", ...]
 	     *     
 	     *     En sortie :
-	     *     worse@callwild.txt            -> "6;31778"
+	     *     candle@callwild.txt            -> "2;31778"
 	     */
 		@Override
 	    public void reduce(Text docID, Iterable<Text> mot_compte_it,

@@ -26,23 +26,33 @@ public class WordCount {
 	{
 		// Attributs
 		private final static IntWritable one = new IntWritable(1);
+
+		
+	    /**     
+	     * 	   En entree : 
+	     *     callwild.txt                -> "Old longings nomadic leap, ..."
+	     *     
+	     *     En sortie :
+	     *     old@callwild.txt            -> "1"
+	     *     longings@callwild.txt       -> "1"
+	     */
 		
 		@Override
 		protected void map(LongWritable keyE, Text value, Context context) throws IOException, InterruptedException
 		{
 			StringTokenizer itr = new StringTokenizer(value.toString());
-			String token;
+			String mot;
 			
 			// On recupere le nom du fichier
-	        String fileName = ((FileSplit) context.getInputSplit()).getPath().getName();
+	        String fichier = ((FileSplit) context.getInputSplit()).getPath().getName();
 	        
 	        while (itr.hasMoreTokens())
 	        {
 	        		// Mise en format de chaque mot
-	        		token = itr.nextToken();
-	        		token.toLowerCase();  // lettres en minuscule
-	        		token = token.replaceAll("[^\\w\\s]", "");  // Regex pour retirer les caracteres speciaux
-	            context.write(new Text(token + "@" + fileName), one);
+	        		mot = itr.nextToken();
+	        		mot = mot.toLowerCase();  // lettres en minuscule
+	        		mot = mot.replaceAll("[^\\w\\s]", "");  // Regex pour retirer les caracteres speciaux
+	            context.write(new Text(mot + "@" + fichier), one);
 	        }
 	    }
 		
@@ -59,6 +69,14 @@ public class WordCount {
 
 	    private IntWritable totalWordCount = new IntWritable();
 
+	    /**     
+	     * 	   En entree : 
+	     *     old@callwild.txt            -> ["1", "1", "1"]
+	     *     
+	     *     En sortie :
+	     *     old@callwild.txt            -> "3"
+	     */
+	    
 	    @Override
 	    public void reduce(final Text key, final Iterable<IntWritable> values,
 	            final Context context) throws IOException, InterruptedException {

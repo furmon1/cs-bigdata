@@ -3,7 +3,6 @@ package cs.bigdata.ex51;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.LinkedHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -20,25 +19,22 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 public class DocCountWord
 {
-	
+		
 	public static class WCTDMapper extends Mapper<LongWritable, Text, Text, Text>
 	{
 	    /**
 	     *     En entree : 
-	     *     worse@callwild.txt            -> "6;31778"
+	     *     candle@callwild.txt            -> "2;31778"
 	     *
 	     *     En sortie :
-	     *     worse  -> "callwild.txt=6;31778"
+	     *     candle  -> "callwild.txt=2;31778"
 	     */	
 		@Override
 	    public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException
 		{
-	        String[] motCompteurs = value.toString().split("\t");
-	        String[] motDoc = motCompteurs[0].split("@");
-	        String mot = motDoc[0];
-	        String doc = motDoc[1];
-	        String compteurs = motCompteurs[1];
-	        context.write(new Text(mot), new Text(doc + "=" + compteurs));
+	        String[] motDoc_compteurs = value.toString().split("\t");
+	        String[] motDoc = motDoc_compteurs[0].split("@");
+	        context.write(new Text(motDoc[0]), new Text(motDoc[1] + "=" + motDoc_compteurs[1]));
 	    }
 	}
 	
@@ -47,52 +43,40 @@ public class DocCountWord
 		
 	    /**
 	     *     En entree : 
-	     *     callwild.txt           -> ["worse=6", "and=1464", ...]
+	     *     candle  -> "callwild.txt=2;31778"
 	     *     
 	     *     En sortie :
-	     *     worse@callwild.txt            -> "6;31778"
+	     *     candle@callwild.txt            -> "tf-idf"
 	     */
 		@Override
 	    public void reduce(Text key, Iterable<Text> values,
 	    		Context context) throws IOException, InterruptedException 
 		{
 			
-	        int numberOfDocumentsInCorpus = 2;
-	        // total frequency of this word
-	        int numberOfDocumentsInCorpusWhereKeyAppears = 0;
-	        Map<String, String> tempFrequencies = new HashMap<String, String>();
+	        int nombreFichiersTextes = 2;
+	        // frequence totale du mot
+	        int frequenceMot = 0;
+	        Map<String, String> doc_freqs = new HashMap<String, String>();
 	        
-	        Map<String, Double> tfIdfs = new HashMap<String, Double>();
 	        for (Text val : values) 
 	        {
-	            String[] documentAndFrequencies = val.toString().split("=");
-	            numberOfDocumentsInCorpusWhereKeyAppears++;
-	            tempFrequencies.put(documentAndFrequencies[0], documentAndFrequencies[1]);
+	            String[] doc_frequence = val.toString().split("=");
+	            frequenceMot++;
+	            doc_freqs.put(doc_frequence[0], doc_frequence[1]);
 	        }
-	        for (String document : tempFrequencies.keySet()) 
+	        for (String document : doc_freqs.keySet()) 
 	        {
-	            String[] wordFrequenceAndTotalWords = tempFrequencies.get(document).split(";");
+	            String[] frequence_totalMot = doc_freqs.get(document).split(";");
 	 
-	            //Term frequency is the quocient of the number of terms in document and the total number of terms in doc
-	            double tf = Double.valueOf(Double.valueOf(wordFrequenceAndTotalWords[0])
-	                    / Double.valueOf(wordFrequenceAndTotalWords[1]));
-	 
-	            //interse document frequency quocient between the number of docs in corpus and number of docs the term appears
-	            double idf = (double) numberOfDocumentsInCorpus / (double) numberOfDocumentsInCorpusWhereKeyAppears;
-	 
-	            //given that log(10) = 0, just consider the term frequency in documents
-	            Double tfIdf = numberOfDocumentsInCorpus == numberOfDocumentsInCorpusWhereKeyAppears ?
+	            // calcul du tf-idf
+	            double tf = Double.valueOf(Double.valueOf(frequence_totalMot[0])
+	                    / Double.valueOf(frequence_totalMot[1]));	 
+	            double idf = (double) nombreFichiersTextes / (double) frequenceMot;	 
+	            Double tfIdf = nombreFichiersTextes == frequenceMot ?
 	                    tf : tf * Math.log10(idf);
 	 
 	            context.write(new Text(key + "@" + document), new Text(tfIdf.toString()));
-	            tfIdfs.put(key + "@" + document, tfIdf);
 	        	}
-	        
-	        // Trie des 20 plus grands tf-idf
-	        Map<String, Integer> result = unsortMap.entrySet().stream()
-	                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-	                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
-	                        (oldValue, newValue) -> oldValue, LinkedHashMap::new));
 	    }
 	}
 

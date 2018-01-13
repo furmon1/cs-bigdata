@@ -17,5 +17,8 @@ public class Tf_idf {
 		// Step 3 - compute tf-idf
 		DocCountWord.main(conf);
 		
+		// Step 4 - sort by score
+		SortKeyByValue.main(conf);
+		
 	}
 }
