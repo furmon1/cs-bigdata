@@ -9,7 +9,7 @@ public class Tree {
 		String[] infos = line.split(";");
 		
 		// Filtering trees with no year or no height
-		if (infos[5].matches("^-?\\d+$") && infos[6].matches("^-?\\d+.0$"))
+		if (!infos[5].equals("") && !infos[6].equals(""))
 		{
 			// Print the wanted output
 			System.out.println(String.format("Year: %s   Height: %s", infos[5], infos[6]));	
